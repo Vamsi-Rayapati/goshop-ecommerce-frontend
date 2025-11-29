@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Star, ShoppingCart } from 'lucide-react';
 import { Suspense } from 'react';
 import SortSelect from './SortSelect';
+import ProductImage from '../../components/ProductImage';
 
 interface ProductsPageProps {
   searchParams: { category_id?: string; sort?: string };
@@ -155,14 +156,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                 {/* Product Image */}
                 <div className="aspect-square overflow-hidden bg-gray-100">
-                  <img
-                    src={product.image_url || '/placeholder-product.svg'}
+                  <ProductImage
+                    src={product.image_url}
                     alt={product.name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder-product.svg';
-                    }}
                   />
                 </div>
 
