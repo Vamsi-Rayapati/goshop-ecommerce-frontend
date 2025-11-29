@@ -1,72 +1,93 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { categoryApi, CategoryResponse } from '../../lib/api';
 import Link from 'next/link';
 import { ShoppingBag, Laptop, Shirt, Home, Dumbbell, Coffee, Package } from 'lucide-react';
-import { categoryApi, CategoryResponse } from '../../lib/api';
 
-// Icon mapping for different category names
+// Icon mapping for different category names using Map
+const categoryIconMap = new Map([
+  ['electronic', Laptop],
+  ['electronics', Laptop],
+  ['tech', Laptop],
+  ['technology', Laptop],
+  ['fashion', Shirt],
+  ['clothing', Shirt],
+  ['apparel', Shirt],
+  ['wear', Shirt],
+  ['home', Home],
+  ['garden', Home],
+  ['furniture', Home],
+  ['decor', Home],
+  ['sport', Dumbbell],
+  ['sports', Dumbbell],
+  ['fitness', Dumbbell],
+  ['gym', Dumbbell],
+  ['exercise', Dumbbell],
+  ['kitchen', Coffee],
+  ['cooking', Coffee],
+  ['dining', Coffee],
+  ['food', Coffee],
+  ['book', ShoppingBag],
+  ['books', ShoppingBag],
+  ['education', ShoppingBag],
+  ['learning', ShoppingBag],
+]);
+
 const getCategoryIcon = (categoryName: string) => {
   const name = categoryName.toLowerCase();
-  if (name.includes('electronic') || name.includes('tech')) return Laptop;
-  if (name.includes('fashion') || name.includes('clothing') || name.includes('apparel')) return Shirt;
-  if (name.includes('home') || name.includes('garden') || name.includes('furniture')) return Home;
-  if (name.includes('sport') || name.includes('fitness') || name.includes('gym')) return Dumbbell;
-  if (name.includes('kitchen') || name.includes('cooking') || name.includes('dining')) return Coffee;
-  if (name.includes('book') || name.includes('education')) return ShoppingBag;
+  
+  // Check for exact matches first
+  if (categoryIconMap.has(name)) {
+    return categoryIconMap.get(name)!;
+  }
+  
+  // Check for partial matches
+  for (const [key, icon] of categoryIconMap) {
+    if (name.includes(key)) {
+      return icon;
+    }
+  }
+  
   return Package; // Default icon
 };
 
-export default function CategoriesPage() {
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function CategoriesPage() {
+  let categories: CategoryResponse[] = [];
+  let error: string | null = null;
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        const response = await categoryApi.getCategories();
-        setCategories(response.categories);
-      } catch (err) {
-        setError('Failed to load categories. Please try again later.');
-        console.error('Error fetching categories:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading categories...</p>
-        </div>
-      </div>
-    );
+  try {
+    console.log('Fetching categories from server...');
+    const response = await categoryApi.getCategories();
+    console.log('Categories response:', response);
+    categories = response.categories;
+    console.log('Categories fetched successfully:', categories.length, 'categories');
+  } catch (err) {
+    console.error('Error fetching categories:', err);
+    
+    // More detailed error handling
+    if (err && typeof err === 'object' && 'message' in err) {
+      error = `API Error: ${err.message}`;
+    } else if (err instanceof Error) {
+      error = `Network Error: ${err.message}`;
+    } else {
+      error = 'Failed to load categories. Please check your API connection.';
+    }
   }
 
+  // Server-side error handling
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <p className="text-red-600">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Try Again
-            </button>
+            <p className="text-sm text-gray-500 mt-2">
+              Server-side error occurred while fetching categories
+            </p>
           </div>
         </div>
       </div>
     );
   }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
@@ -79,60 +100,70 @@ export default function CategoriesPage() {
         </p>
       </div>
 
-      {/* Categories Grid */}
+      {/* Categories Grid - Server Rendered */}
       {categories.length === 0 ? (
         <div className="text-center py-12">
           <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No categories found</h3>
           <p className="text-gray-600">Categories will appear here once they are added to the catalog.</p>
+          <p className="text-sm text-green-600 mt-2">✅ Server-side rendered</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((category) => {
-            const IconComponent = getCategoryIcon(category.name);
-            
-            return (
-              <Link
-                key={category.id}
-                href={`/products?category=${category.name.toLowerCase()}`}
-                className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {/* Category Image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={`https://via.placeholder.com/400x300/6366f1/white?text=${encodeURIComponent(category.name)}`}
-                    alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-300"></div>
-                  
-                  {/* Icon Overlay */}
-                  <div className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-md">
-                    <IconComponent className="h-6 w-6 text-indigo-600" />
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories.map((category) => {
+              const IconComponent = getCategoryIcon(category.name);
+              
+              return (
+                <Link
+                  key={category.id}
+                  href={`/products?category_id=${category.id}`}
+                  className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                >
+                  {/* Category Image */}
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={`https://via.placeholder.com/400x300/6366f1/white?text=${encodeURIComponent(category.name)}`}
+                      alt={category.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-300"></div>
+                    
+                    {/* Icon Overlay */}
+                    <div className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-md">
+                      <IconComponent className="h-6 w-6 text-indigo-600" />
+                    </div>
                   </div>
-                </div>
 
-                {/* Category Info */}
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                    {category.name}
-                  </h3>
-                  <p className="text-gray-600 mb-3">
-                    Explore our collection of {category.name.toLowerCase()} products
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      View products
-                    </span>
-                    <span className="text-indigo-600 font-medium group-hover:text-indigo-700">
-                      Explore →
-                    </span>
+                  {/* Category Info */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                      {category.name}
+                    </h3>
+                    <p className="text-gray-600 mb-3">
+                      Explore our collection of {category.name.toLowerCase()} products
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">
+                        View products
+                      </span>
+                      <span className="text-indigo-600 font-medium group-hover:text-indigo-700">
+                        Explore →
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+          
+          {/* Server-side rendered indicator */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-green-600">
+              ✅ {categories.length} categories rendered server-side
+            </p>
+          </div>
+        </>
       )}
 
       {/* CTA Section */}

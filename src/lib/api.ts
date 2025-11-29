@@ -82,6 +82,29 @@ export interface CategoriesResponse {
   total: number;
 }
 
+// Product types
+export interface ProductResponse {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category_id: number;
+  category_name: string;
+  stock_quantity: number;
+  rating: number;
+  reviews_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductsResponse {
+  products: ProductResponse[];
+  total: number;
+  page_no: number;
+  page_size: number;
+}
+
 // API Error Response
 export interface ApiError {
   message: string;
@@ -93,8 +116,10 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://catalog-service:4003';
   const url = `${baseUrl}${endpoint}`;
+  
+  console.log('API Request:', url);
   
   const config: RequestInit = {
     headers: {
@@ -109,14 +134,18 @@ async function apiRequest<T>(
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error('API Error:', response.status, errorData.message || response.statusText);
       throw {
-        message: errorData.message || 'An error occurred',
+        message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
         status: response.status,
       } as ApiError;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log('API Response:', endpoint, 'success');
+    return data;
   } catch (error) {
+    console.error('API Request failed:', endpoint, error);
     if (error && typeof error === 'object' && 'status' in error) {
       throw error;
     }
@@ -258,6 +287,52 @@ export const categoryApi = {
     return apiRequest<CategoryResponse>(`/catalog/api/v1/categories/${id}`, {
       method: 'GET',
     });
+  },
+};
+
+// Products API functions
+export const productsApi = {
+  getProducts: async (
+    pageNo: number = 1, 
+    pageSize: number = 50, 
+    categoryId?: number,
+    sortBy?: string,
+    sortOrder?: string
+  ): Promise<ProductsResponse> => {
+    const params = new URLSearchParams({
+      page_no: pageNo.toString(),
+      page_size: pageSize.toString(),
+    });
+    
+    if (categoryId) {
+      params.append('category_id', categoryId.toString());
+    }
+    
+    if (sortBy) {
+      params.append('sort_by', sortBy);
+    }
+    
+    if (sortOrder) {
+      params.append('sort_order', sortOrder);
+    }
+    
+    return apiRequest<ProductsResponse>(`/catalog/api/v1/products?${params.toString()}`, {
+      method: 'GET',
+    });
+  },
+
+  getProduct: async (id: number): Promise<ProductResponse> => {
+    return apiRequest<ProductResponse>(`/catalog/api/v1/products/${id}`, {
+      method: 'GET',
+    });
+  },
+
+  getProductsByCategory: async (
+    categoryId: number, 
+    pageNo: number = 1, 
+    pageSize: number = 50
+  ): Promise<ProductsResponse> => {
+    return productsApi.getProducts(pageNo, pageSize, categoryId);
   },
 };
 
