@@ -277,8 +277,8 @@ export const userApi = {
 
 // Category API functions
 export const categoryApi = {
-  getCategories: async (pageNo: number = 1, pageSize: number = 50): Promise<CategoriesResponse> => {
-    return apiRequest<CategoriesResponse>(`/catalog/api/v1/categories?page_no=${pageNo}&page_size=${pageSize}`, {
+  getCategories: async (): Promise<CategoriesResponse> => {
+    return apiRequest<CategoriesResponse>(`/catalog/api/v1/categories/all`, {
       method: 'GET',
     });
   },
